@@ -124,8 +124,6 @@ Public Class frmControl
                 Else
                     IRC.SendMessage("AUTHDENIED", strChannel)
                 End If
-
-
         End Select
     End Sub
 
@@ -356,193 +354,32 @@ Public Class frmControl
                         End If
                     End If
                 End If
-
-                    Case "!map"
-                    Dim strMsg As String
-                    Dim i As Long
-                    For i = 0 To UBound(tServer)
-                        If Len(strMsg) <> 0 Then
-                            strMsg = strMsg & " | "
-                        End If
-                        strMsg += "Server: " & tServer(i).Name & "[" & tServer(i).IP & "] Load: " & tServer(i).Load
-                        If tServer(i).Ignore = True Then
-                            strMsg += " (IGNORED)"
-                        End If
-                    Next i
-                    IRC.SendMessage(strMsg, strChannel)
-                    Case "!highload"
-                    IRC.SendMessage("Server with the highest load is " & tServer(GetServerHighLoadAsInt()).Name & " at " & tServer(GetServerHighLoadAsInt()).Load & " users.", strChannel)
-                    Case "!lowload"
-                    IRC.SendMessage("Server with the lowest load is " & tServer(GetServerLowLoadAsInt()).Name & " at " & tServer(GetServerLowLoadAsInt()).Load & " users.", strChannel)
-                    Case "!current"
-                    IRC.SendMessage("Current server is " & GetCurrentServerAsName(), strChannel)
-                    Case "!refresh"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        IRC.SendMessage("Reloading /MAP Data.", strChannel)
-                        IRC.Send("MAP")
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                ' </Added by: Adam at: 7/11/2004-05:46:00 on machine: BALLER-STA1>
+            Case "!priority"
+                '***********************
+                'Added by Zach - 7/11/04
+                'Checks the channel for a lower priority
+                '***********************
+                IRC.Send("NAMES #" & strChannel)
+            Case "!rejoin"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    IRC.ReJoin()
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!partjoin"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    If UBound(strWord) = 0 Then
+                        IRC.SendMessage("Not enough parameters.", strChannel)
+                    ElseIf UBound(strWord) = 1 Then
+                        IRC.PartJoin(strWord(1))
+                    ElseIf UBound(strWord) = 2 Then
+                        IRC.PartJoin(strWord(1), strWord(2))
                     End If
-                    Case "!ignore"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        Dim i As Long
-                        Dim intServer As Integer
-                        For i = 0 To UBound(tServer)
-                            If tServer(i).name = strWord(1) Then
-                                intServer = i + 1
-                            End If
-                        Next
-                        If intServer <> 0 Then
-                            tServer(intServer - 1).Ignore = True
-                            Settings.WriteConfigInfo("Ingore", tServer(intServer - 1).Name, True)
-                            IRC.SendMessage("Server added to ignore: " & tServer(intServer - 1).Name, strChannel)
-                        Else
-                            IRC.SendMessage("Unknown server: " & strWord(1), strChannel)
-                        End If
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                    Case "!unignore"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        Dim i As Long
-                        Dim intServer As Integer
-                        For i = 0 To UBound(tServer)
-                            If tServer(i).name = strWord(1) Then
-                                intServer = i + 1
-                            End If
-                        Next
-                        If intServer <> 0 Then
-                            tServer(intServer - 1).Ignore = False
-                            Settings.WriteConfigInfo("Ingore", tServer(intServer - 1).Name, False)
-                            IRC.SendMessage("Server removed from ignore: " & tServer(intServer - 1).Name, strChannel)
-                        Else
-                            IRC.SendMessage("Unknown server: " & strWord(1), strChannel)
-                        End If
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                    Case "!auth"
-                    If UBound(strWord) > 0 Then
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            Settings.WriteConfigInfo("Auth", strWord(1), True)
-                            IRC.SendMessage("User added.", strChannel)
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                        End If
-                    End If
-
-                    Case "!unauth"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        Settings.WriteConfigInfo("Auth", strWord(1), False)
-                        IRC.SendMessage("User removed.", strChannel)
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                    Case "!mode"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        If blnTestMode = True Then
-                            IRC.SendMessage("Running in test mode, changes WILL NOT be applied.", strChannel)
-                        Else
-                            IRC.SendMessage("Running in live mode, changes WILL be applied.", strChannel)
-                        End If
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                    Case "!setmode"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        If strWord(1).ToLower = "test" Then
-                            blnTestMode = True
-                        Else
-                            blnTestMode = False
-                        End If
-                        Settings.WriteConfigInfo("General", "TestMode", blnTestMode)
-                        IRC.SendMessage("Run mode set.", strChannel)
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                    Case "!help"
-                    If strWord.GetUpperBound(0) = 0 Then
-                        IRC.SendMessage("DNS-Bot Help:", strChannel)
-                        IRC.SendMessage("!exit, !resolve, !dns, !hm, !about, !die, !nick, !map, !highload, !lowload, !current, !refresh, !ignore, !unignore, !auth, !unauth, !mode, !setmode", strChannel)
-                    Else
-                        Select Case strWord(1)
-                            Case "!exit"
-                                IRC.SendMessage("!exit - Discconects from the server but leaves the application running", strChannel)
-                            Case "!resolve", "!dns"
-                                IRC.SendMessage("!resolve - Resolves a domain to a IP address. Syntax: !resolve www.google.com", strChannel)
-                            Case "!hm"
-                                IRC.SendMessage("!hm - Resolves a domain to a IP address", strChannel)
-                            Case "!about"
-                                IRC.SendMessage("!about - Displays information about DNS-Bot", strChannel)
-                            Case "!die"
-                                IRC.SendMessage("!die - Discconects from the server and terminates the application", strChannel)
-                            Case "!nick"
-                                IRC.SendMessage("!nick - Changes the bot's nickname. Syntax: !nick NewName", strChannel)
-                            Case "!map"
-                                IRC.SendMessage("!map - Displays the parsed map data", strChannel)
-                            Case "!highload"
-                                IRC.SendMessage("!highload - Displays the server with the highest load", strChannel)
-                            Case "!lowload"
-                                IRC.SendMessage("!lowload - Displays the server with the lowest load", strChannel)
-                            Case "!current"
-                                IRC.SendMessage("!current - Displays the current server", strChannel)
-                            Case "!refresh"
-                                IRC.SendMessage("!refresh - Reloads the MAP data", strChannel)
-                            Case "!ignore"
-                                IRC.SendMessage("!ignore - Adds a server to the ignore list. Syntax: !ignore irc.server.tld", strChannel)
-                            Case "!unignore"
-                                IRC.SendMessage("!unignore - Removes a server from the ignore list. Syntax: !unignore irc.server.tld", strChannel)
-                            Case "!auth"
-                                IRC.SendMessage("!auth - Adds a user to the auth list. Syntax: !auth Nick!name@domain.tld", strChannel)
-                            Case "!unauth"
-                                IRC.SendMessage("!unauth - Removes a user from the auth list. Syntax: !unauth Nick!name@domain.tld", strChannel)
-                            Case "!mode"
-                                IRC.SendMessage("!mode - Displays the current running mode", strChannel)
-                            Case "!setmode"
-                                IRC.SendMessage("!setmode - Sets the current running mode. Syntax: !setmode test", strChannel)
-                        End Select
-                    End If
-
-
-                    '***********************
-                    'Added by Zach - 7/10/04
-                    'Simply determines total number of users and displays
-                    '***********************
-                    Case "!users"
-                    Dim i As Int32, sum As Int32
-                    For i = 0 To UBound(tServer)
-                        sum += tServer(i).Load
-                    Next
-                    IRC.SendMessage("There are currently " & sum & " global users on OpenIRCNet", strChannel)
-
-
-                    '***********************
-                    'Added by Zach - 7/11/04
-                    'Checks the channel for a lower priority
-                    '***********************
-                    Case "!priority"
-                    IRC.Send("NAMES #" & strChannel)
-                    Case "!rejoin"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        IRC.ReJoin()
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                    Case "!partjoin"
-                    If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                        If UBound(strWord) = 0 Then
-                            IRC.SendMessage("Not enough parameters.", strChannel)
-                        ElseIf UBound(strWord) = 1 Then
-                            IRC.PartJoin(strWord(1))
-                        ElseIf UBound(strWord) = 2 Then
-                            IRC.PartJoin(strWord(1), strWord(2))
-                        End If
-
-                    Else
-                        IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                    End If
-                End Select
-
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+        End Select
     End Sub
 
     Private Sub IRC_ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelJoin
@@ -691,9 +528,6 @@ Public Class frmControl
         End If
     End Sub
 
-
-
-
     Private Sub IRC_DataArrival_StrArray(ByVal Data() As String) Handles IRC.DataArrival_StrArray
         Dim x As Int32
         Dim l_blnLowestPri As Boolean = True 'priority value defaults to us being the lowest
@@ -706,14 +540,17 @@ Public Class frmControl
             'make sure the name matches
             If Mid(Data(x), 1, 11) = Mid(IRC.Nickname, 1, 11) Then
                 'check to see if there is a priority lower than me
-                If Mid$(Data(x), 12, 1) < m_intPriority Then 'mid is always one more than above mid value
+                'See if we're dealing with a number here
+                If IsNumeric(Mid$(Data(x), 12, 1)) Then
+                    If Int(Mid$(Data(x), 12, 1)) < m_intPriority Then 'mid is always one more than above mid value
 
-                    'there is someone lower than us, so we dont have to worry about it
-                    l_blnLowestPri = False
+                        'there is someone lower than us, so we dont have to worry about it
+                        l_blnLowestPri = False
 
-                    'set the name for output
-                    l_strLowestName = Data(x)
-                    Exit For
+                        'set the name for output
+                        l_strLowestName = Data(x)
+                        Exit For
+                    End If
                 End If
             End If
         Next
