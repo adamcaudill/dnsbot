@@ -233,6 +233,9 @@ Public Class cIRC
     End Sub
 
     Public Sub Raw(ByVal data As String)
+        'What is this for?
+        'Seems Raw & Send do the same thing,
+        'Perhaps we should make Send private? - Adam
         m_sckIRC.Send(Text.Encoding.ASCII.GetBytes(data & ControlChars.CrLf))
     End Sub
 

@@ -325,8 +325,7 @@ Public Class frmControl
                 End If
             Case "!users"
                 '***********************
-                'Added by Excaliber
-                '7/10/04
+                'Added by Zach - 7/10/04
                 'Simply determines total number of users and displays
                 '***********************
                 Dim i As Int32, sum As Int32
@@ -360,7 +359,7 @@ Public Class frmControl
                 'Added by Zach - 7/11/04
                 'Checks the channel for a lower priority
                 '***********************
-                IRC.Send("NAMES #" & strChannel)
+                IRC.Send("NAMES " & strChannel)
             Case "!rejoin"
                 If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
                     IRC.ReJoin()
@@ -386,9 +385,6 @@ Public Class frmControl
         IRC.SendMessage("Hello " & UserName, strChannel)
         IRC.Send("NAMES #dns-bot")
     End Sub
-
-
-
 
     Private Sub ProcMap(ByVal Data As String)
         Static blnMapStarted As Boolean
@@ -435,7 +431,6 @@ Public Class frmControl
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
 
         IRC.Connect()
-
     End Sub
 
     Private Function AppPath() As String
@@ -538,11 +533,11 @@ Public Class frmControl
             Data(x) = Replace(Data(x), ":", "")
 
             'make sure the name matches
-            If Mid(Data(x), 1, 11) = Mid(IRC.Nickname, 1, 11) Then
+            If Mid(Data(x), 1, IRC.Nickname.Length - 1) = Mid(IRC.Nickname, 1, IRC.Nickname.Length - 1) Then
                 'check to see if there is a priority lower than me
                 'See if we're dealing with a number here
-                If IsNumeric(Mid$(Data(x), 12, 1)) Then
-                    If Int(Mid$(Data(x), 12, 1)) < m_intPriority Then 'mid is always one more than above mid value
+                If IsNumeric(Mid$(Data(x), IRC.Nickname.Length, 1)) Then
+                    If Int(Mid$(Data(x), IRC.Nickname.Length, 1)) < m_intPriority Then 'mid is always one more than above mid value
 
                         'there is someone lower than us, so we dont have to worry about it
                         l_blnLowestPri = False
