@@ -150,7 +150,11 @@ Public Class cIRC
                     ElseIf strWord(0).StartsWith(":") Then
                         'These should all be messages
                         Dim strUserName As String
-                        strUserName = strWord(0).Replace(":", "").Substring(0, InStr(strWord(0).Replace(":", ""), "!") - 1)
+                        If InStr(strWord(0), "!") <> 0 Then
+                            strUserName = strWord(0).Replace(":", "").Substring(0, InStr(strWord(0).Replace(":", ""), "!") - 1)
+                        Else
+                            strUserName = strWord(0).Replace(":", "")
+                        End If
                         Select Case strWord(1)
                             Case "PRIVMSG"
                                 'Received a message
@@ -171,6 +175,10 @@ Public Class cIRC
                                     'CTCP Version request
                                     Send("NOTICE " & strUserName & " :" & Chr(1) & "VERSION " & m_strVersion & Chr(1))
                                     RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP VERSION")
+                                ElseIf strWord(2) = m_strNickname Then
+                                    Dim strMsg As String
+                                    strMsg = strLines(i).Substring(InStr(strLines(i), strWord(2)) + strWord(2).Length + 1)
+                                    RaiseEvent DataArrival("PM: (" & strWord(0).Replace(":", "") & ") " & strMsg)
                                 Else
                                     'Normal channel message
                                     Dim strMsg As String
