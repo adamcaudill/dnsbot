@@ -1,4 +1,28 @@
+'/*
+' * DNS-Bot
+' *          Copyright 2004 - DNS-Bot Team
+' *          See Copyright.txt & License.txt for details
+' *
+' *
+' * This program is free software; you can redistribute it and/or modify
+' * it under the terms of the GNU General Public License as published by
+' * the Free Software Foundation; either version 1, or (at your option)
+' * any later version.
+' *
+' * This program is distributed in the hope that it will be useful,
+' * but WITHOUT ANY WARRANTY; without even the implied warranty of
+' * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+' * GNU General Public License for more details.
+' *
+' * You should have received a copy of the GNU General Public License
+' * along with this program; if not, write to the Free Software
+' * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+' *
+' */
+
 Public Class frmControl
+
+#Region " Declarations "
     Inherits System.Windows.Forms.Form
 
     Dim WithEvents IRC As New IRC_Lib.cIRC
@@ -9,8 +33,6 @@ Public Class frmControl
     Dim m_otmrThread As System.Threading.Thread
     Dim tServer() As Server
 
-
-
     Private m_intPriority As Int32
     Private m_strPriorityPass As String
     Private m_blnIsPriority As Boolean
@@ -19,13 +41,14 @@ Public Class frmControl
     Delegate Sub otmrChallenge(ByVal Nick As String)
     Private tmrUpdate As System.Threading.Thread
 
-
     Private Structure Server
         Dim IP As String
         Dim Name As String
         Dim Load As Long
         Dim Ignore As Boolean
     End Structure
+
+#End Region
 
 #Region " Windows Form Designer generated code "
 
@@ -91,6 +114,129 @@ Public Class frmControl
 
 #End Region
 
+#Region " Misc Subs/Functions "
+    Private Sub ProcMap(ByVal Data As String)
+        Static blnMapStarted As Boolean
+        If Data <> "MAP: End of /MAP" Then
+            If blnMapStarted = False Then
+                'Clear array
+                blnMapStarted = True
+                ReDim tServer(0)
+            Else
+                ReDim Preserve tServer(tServer.GetUpperBound(0) + 1)
+            End If
+            Data = Data.Substring(InStr(Data, "MAP:") + 4)
+            Data = Data.Replace("(", "")
+            Data = Data.Replace(")", "")
+            Data = Data.Replace("|-", "")
+            Data = Data.Replace("`-", "")
+            Data = Data.Replace("`", "")
+            Data = Data.Replace("|", "")
+            Do Until InStr(Data, "  ") = 0
+                Data = Data.Replace("  ", " ")
+            Loop
+            Dim sData() As String
+            Data = Trim(Data)
+            sData = Split(Data, " ")
+            tServer(UBound(tServer)).Name = sData(0)
+            tServer(UBound(tServer)).Load = sData(1)
+            tServer(UBound(tServer)).IP = System.Net.Dns.Resolve(sData(0)).AddressList(0).ToString
+            tServer(UBound(tServer)).Ignore = Settings.GetConfigInfo("Ingore", sData(0), False)(1)
+        Else
+            blnMapStarted = False
+        End If
+    End Sub
+
+    Private Function AppPath() As String
+        Return System.AppDomain.CurrentDomain.BaseDirectory()
+    End Function
+
+    Private Sub SaveSettings()
+        Settings.WriteConfigInfo("General", "NickName", IRC.Nickname)
+        Settings.WriteConfigInfo("Network", "Server", IRC.Server)
+        Settings.WriteConfigInfo("Network", "Port", IRC.Port)
+        Settings.WriteConfigInfo("General", "Name", IRC.RealName)
+    End Sub
+
+    Private Function GetCurrentServerAsName() As String
+        Dim strCurrentIP As String = System.Net.Dns.Resolve("openircnet.ath.cx").AddressList(0).ToString
+        Dim i As Long
+        Dim intCurrent As Integer
+        For i = 0 To tServer.GetUpperBound(0)
+            If tServer(i).IP = strCurrentIP Then
+                intCurrent = i + 1
+            End If
+        Next
+        If intCurrent <> 0 Then
+            Return tServer(intCurrent - 1).Name
+        Else
+            Return strCurrentIP
+        End If
+    End Function
+
+    Private Function GetCurrentServerAsInt() As Integer
+        Dim strCurrentIP As String = System.Net.Dns.Resolve("openircnet.ath.cx").AddressList(0).ToString
+        Dim i As Long
+        Dim intCurrent As Integer
+        For i = 0 To tServer.GetUpperBound(0)
+            If tServer(i).IP = strCurrentIP Then
+                intCurrent = i + 1
+            End If
+        Next
+        If intCurrent <> 0 Then
+            Return intCurrent - 1
+        Else
+            Return -1
+        End If
+    End Function
+
+    Private Function GetServerHighLoadAsInt() As Integer
+        Dim i As Long
+        Dim intHigh As Integer
+        For i = 1 To tServer.GetUpperBound(0)
+            If tServer(i).Load > tServer(intHigh).Load And tServer(i).Ignore = False Then
+                intHigh = i
+            End If
+        Next
+        Return intHigh
+    End Function
+
+    Private Function GetServerLowLoadAsInt() As Integer
+        Dim i As Long
+        Dim intLow As Integer
+        For i = 1 To tServer.GetUpperBound(0)
+            If tServer(i).Load < tServer(intLow).Load And tServer(i).Ignore = False Then
+                intLow = i
+            End If
+        Next
+        Return intLow
+    End Function
+
+    Private Sub SetCurrentServerByInt(ByVal intServer As Integer)
+        If intServer <> -1 Then
+            If blnTestMode = False Then
+                'Change sever
+            Else
+                'Test mode, just announce what we should do.
+                IRC.SendMessage("Changing server to: " & tServer(intServer).Name, "#DNS-Bot")
+            End If
+        End If
+    End Sub
+
+    Private Sub AutoUpdate()
+        Dim counter As Int32
+        Do While 1
+            System.Threading.Thread.CurrentThread.Sleep(60000)
+            counter += 1
+            If counter = 60 Then
+                counter = 0
+                Process.Start(System.AppDomain.CurrentDomain.BaseDirectory & "\DNS-Updater.exe")
+            End If
+        Loop
+    End Sub
+#End Region
+
+#Region " IRC Events "
     Private Sub IRC_DataArrival(ByVal Data As String) Handles IRC.DataArrival
         txtReceived.Text += Data & ControlChars.CrLf
         If Data.Substring(0, 4) = "MAP:" Then
@@ -134,6 +280,7 @@ Public Class frmControl
 
         ' <Added by: Adam at: 7/11/2004-05:44:24 on machine: BALLER-STA1>
         'This will support thr new MultiBot mode & accept commands prefixed with the bot name
+        'BUGBUG - 990696
         If strWord(0) = IRC.Nickname Then
             Data = Data.Substring(InStr(Data, IRC.Nickname) + IRC.Nickname.Length)
             strWord = Data.Split(" ")
@@ -394,156 +541,7 @@ Public Class frmControl
                 Else
                     IRC.SendMessage("You are not authorized to use this command.", strChannel)
                 End If
-
-
-
         End Select
-    End Sub
-
-
-
-    Private Sub ProcMap(ByVal Data As String)
-        Static blnMapStarted As Boolean
-
-        If Data <> "MAP: End of /MAP" Then
-            If blnMapStarted = False Then
-                'Clear array
-                blnMapStarted = True
-                ReDim tServer(0)
-            Else
-                ReDim Preserve tServer(tServer.GetUpperBound(0) + 1)
-            End If
-            Data = Data.Substring(InStr(Data, "MAP:") + 4)
-            Data = Data.Replace("(", "")
-            Data = Data.Replace(")", "")
-            Data = Data.Replace("|-", "")
-            Data = Data.Replace("`-", "")
-            Data = Data.Replace("`", "")
-            Data = Data.Replace("|", "")
-            Do Until InStr(Data, "  ") = 0
-                Data = Data.Replace("  ", " ")
-            Loop
-            Dim sData() As String
-            Data = Trim(Data)
-            sData = Split(Data, " ")
-            tServer(UBound(tServer)).Name = sData(0)
-            tServer(UBound(tServer)).Load = sData(1)
-            tServer(UBound(tServer)).IP = System.Net.Dns.Resolve(sData(0)).AddressList(0).ToString
-            tServer(UBound(tServer)).Ignore = Settings.GetConfigInfo("Ingore", sData(0), False)(1)
-        Else
-            blnMapStarted = False
-        End If
-    End Sub
-
-    Private Sub frmControl_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
-        blnTestMode = Settings.GetConfigInfo("General", "TestMode", False)(1)
-        IRC.Server = Settings.GetConfigInfo("Network", "Server", "openircnet.ath.cx")(1)
-        IRC.Port = Settings.GetConfigInfo("Network", "Port", "6667")(1)
-        IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
-        IRC.Version = "DNS-Bot v" & Application.ProductVersion
-        m_strBinaryLocation = Settings.GetConfigInfo("Network", "BinaryLocation", "")(1)
-
-        m_intPriority = Settings.GetConfigInfo("General", "PriorityValue", "")(1)
-        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-")(1)
-        IRC.Nickname &= m_intPriority
-
-        m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
-
-        IRC.Connect()
-
-        tmrUpdate = New System.Threading.Thread(AddressOf Me.AutoUpdate)
-        tmrUpdate.Start()
-
-    End Sub
-
-    Private Function AppPath() As String
-        Return System.AppDomain.CurrentDomain.BaseDirectory()
-    End Function
-
-    Private Sub SaveSettings()
-        'Settings.WriteConfigInfo("General", "NickName", IRC.Nickname)
-        Settings.WriteConfigInfo("Network", "Server", IRC.Server)
-        Settings.WriteConfigInfo("Network", "Port", IRC.Port)
-        Settings.WriteConfigInfo("General", "Name", IRC.RealName)
-    End Sub
-
-    Private Sub tmrRefresh_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles tmrRefresh.Tick
-        IRC.Send("MAP")
-        Application.DoEvents()
-        If GetCurrentServerAsInt() <> -1 Or tServer(GetCurrentServerAsInt()).Ignore = False Then
-            If GetCurrentServerAsInt() <> GetServerLowLoadAsInt() Then
-                If tServer(GetCurrentServerAsInt).Load > tServer(GetServerLowLoadAsInt).Load Then
-                    SetCurrentServerByInt(GetServerLowLoadAsInt())
-                End If
-            End If
-        Else
-            SetCurrentServerByInt(GetServerLowLoadAsInt())
-        End If
-    End Sub
-
-    Private Function GetCurrentServerAsName() As String
-        Dim strCurrentIP As String = System.Net.Dns.Resolve("openircnet.ath.cx").AddressList(0).ToString
-        Dim i As Long
-        Dim intCurrent As Integer
-        For i = 0 To tServer.GetUpperBound(0)
-            If tServer(i).IP = strCurrentIP Then
-                intCurrent = i + 1
-            End If
-        Next
-        If intCurrent <> 0 Then
-            Return tServer(intCurrent - 1).Name
-        Else
-            Return strCurrentIP
-        End If
-    End Function
-
-    Private Function GetCurrentServerAsInt() As Integer
-        Dim strCurrentIP As String = System.Net.Dns.Resolve("openircnet.ath.cx").AddressList(0).ToString
-        Dim i As Long
-        Dim intCurrent As Integer
-        For i = 0 To tServer.GetUpperBound(0)
-            If tServer(i).IP = strCurrentIP Then
-                intCurrent = i + 1
-            End If
-        Next
-        If intCurrent <> 0 Then
-            Return intCurrent - 1
-        Else
-            Return -1
-        End If
-    End Function
-
-    Private Function GetServerHighLoadAsInt() As Integer
-        Dim i As Long
-        Dim intHigh As Integer
-        For i = 1 To tServer.GetUpperBound(0)
-            If tServer(i).Load > tServer(intHigh).Load And tServer(i).Ignore = False Then
-                intHigh = i
-            End If
-        Next
-        Return intHigh
-    End Function
-
-    Private Function GetServerLowLoadAsInt() As Integer
-        Dim i As Long
-        Dim intLow As Integer
-        For i = 1 To tServer.GetUpperBound(0)
-            If tServer(i).Load < tServer(intLow).Load And tServer(i).Ignore = False Then
-                intLow = i
-            End If
-        Next
-        Return intLow
-    End Function
-
-    Private Sub SetCurrentServerByInt(ByVal intServer As Integer)
-        If intServer <> -1 Then
-            If blnTestMode = False Then
-                'Change sever
-            Else
-                'Test mode, just announce what we should do.
-                IRC.SendMessage("Changing server to: " & tServer(intServer).Name, "#DNS-Bot")
-            End If
-        End If
     End Sub
 
     Private Sub IRC_DataArrival_StrArray(ByVal Data() As String) Handles IRC.DataArrival_StrArray
@@ -552,7 +550,6 @@ Public Class frmControl
         Dim l_strLowestName As String = IRC.Nickname
 
         'make sure we are priority so as to not waste time
-
 
         For x = 5 To UBound(Data) - 1
             'remove any nasty ":"s that might mess things up
@@ -590,15 +587,12 @@ Public Class frmControl
             temptmrChallenge.BeginInvoke(l_strLowestName, Nothing, Nothing)
 
         End If
-
-
     End Sub
 
     Private Sub IRC_NickChange(ByVal UserName As String, ByVal UserName2 As String, ByVal strUserMask As String) Handles IRC.NickChange
         If Mid$(UserName2, 1, Len(UserName2) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1) Then
             IRC.Send("NAMES " & IRC.Channel)
         End If
-
     End Sub
 
     Private Sub IRC_ChannelPart(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelPart
@@ -614,17 +608,28 @@ Public Class frmControl
 
     Private Sub IRC_ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelJoin
         Debug.WriteLine(Mid$(UserName, 1, Len(UserName) - 1) & vbTab & Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1))
-
         If Mid$(UserName, 1, Len(UserName) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1) Then
             IRC.SendMessage("Hello " & UserName, strChannel)
             IRC.Send("NAMES " & IRC.Channel)
         End If
     End Sub
+#End Region
 
-    Private Sub txtReceived_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtReceived.TextChanged
-        txtReceived.SelectionStart = Len(txtReceived.Text)
+#Region " Form Events "
+    Private Sub frmControl_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
+        blnTestMode = Settings.GetConfigInfo("General", "TestMode", False)(1)
+        IRC.Server = Settings.GetConfigInfo("Network", "Server", "polyfractal.ath.cx")(1)
+        IRC.Port = Settings.GetConfigInfo("Network", "Port", "6667")(1)
+        IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
+        IRC.Version = "DNS-Bot v" & Application.ProductVersion
+
+        m_intPriority = Settings.GetConfigInfo("General", "Priority", "1")(1)
+        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-" & m_intPriority)(1)
+
+        m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
+
+        IRC.Connect()
     End Sub
-
 
     Private Sub tmrChallenge(ByVal nick As String)
         System.Threading.Thread.CurrentThread.Sleep(6000)
@@ -632,30 +637,30 @@ Public Class frmControl
             IRC.SendMessage("I am retaining Priority", IRC.Channel)
             IRC.SendMessage("AUTHDENIED", nick)
         End If
-
-
     End Sub
 
-    Private Sub AutoUpdate()
-        Dim counter As Int32
-        Do While 1
-            System.Threading.Thread.CurrentThread.Sleep(60000)
-            counter += 1
-            If counter = 60 Then
-                counter = 0
-                Process.Start(System.AppDomain.CurrentDomain.BaseDirectory & "\DNS-Updater.exe")
+    Private Sub tmrRefresh_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles tmrRefresh.Tick
+        IRC.Send("MAP")
+        Application.DoEvents()
+        If GetCurrentServerAsInt() <> -1 Or tServer(GetCurrentServerAsInt()).Ignore = False Then
+            If GetCurrentServerAsInt() <> GetServerLowLoadAsInt() Then
+                If tServer(GetCurrentServerAsInt).Load > tServer(GetServerLowLoadAsInt).Load Then
+                    SetCurrentServerByInt(GetServerLowLoadAsInt())
+                End If
             End If
+        Else
+            SetCurrentServerByInt(GetServerLowLoadAsInt())
+        End If
+    End Sub
 
-        Loop
-
-
-
+    Private Sub txtReceived_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtReceived.TextChanged
+        txtReceived.SelectionStart = Len(txtReceived.Text)
     End Sub
 
     Private Sub frmControl_Closing(ByVal sender As Object, ByVal e As System.ComponentModel.CancelEventArgs) Handles MyBase.Closing
         tmrUpdate.Abort()
         tmrUpdate = Nothing
-
     End Sub
+#End Region
 End Class
 

@@ -1,3 +1,25 @@
+'/*
+' * DNS-Bot
+' *          Copyright 2004 - DNS-Bot Team
+' *          See Copyright.txt & License.txt for details
+' *
+' *
+' * This program is free software; you can redistribute it and/or modify
+' * it under the terms of the GNU General Public License as published by
+' * the Free Software Foundation; either version 1, or (at your option)
+' * any later version.
+' *
+' * This program is distributed in the hope that it will be useful,
+' * but WITHOUT ANY WARRANTY; without even the implied warranty of
+' * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+' * GNU General Public License for more details.
+' *
+' * You should have received a copy of the GNU General Public License
+' * along with this program; if not, write to the Free Software
+' * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+' *
+' */
+
 Imports System.Net.Sockets
 Imports System.Threading
 
@@ -91,7 +113,7 @@ Public Class cIRC
 
     Private Sub Listen()
         Do While (m_sckIRC.Connected)
-            Dim bytBuffer(4095) As Byte 'BUGBUG -- This limits the max data received at once to 4096 bytes
+            Dim bytBuffer(16383) As Byte 'BUGBUG -- This limits the max data received at once to 16384 bytes
             m_sckIRC.Receive(bytBuffer)
             Dim strLines() As String = Text.Encoding.ASCII.GetString(bytBuffer).Replace(Chr(10), "").Split(ControlChars.Cr)
 
@@ -107,7 +129,7 @@ Public Class cIRC
 
                     'Check to see if the first word is the server name
                     'If strWord(0).Substring(2).ToLower = m_strServer Then                ' <----- NOTE: Make sure this line is uncommented. (Adam)
-                    If strWord(0).ToLower = ":polyfractal.ath.cx" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
+                    If strWord(0).ToLower = ":irc.shadowofthebat.com" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
                         'This is a server message
                         If strWord(1) = "NOTICE" Then
                             'Server NOTICE
@@ -195,6 +217,7 @@ Public Class cIRC
                                     Send("NOTICE " & strUserName & " :" & Chr(1) & "VERSION " & m_strVersion & Chr(1))
                                     RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP VERSION")
                                 ElseIf strWord(2) = m_strNickname Then
+                                    'PM
                                     Dim strMsg As String
                                     strMsg = strLines(i).Substring(InStr(strLines(i), strWord(2)) + strWord(2).Length + 1)
                                     RaiseEvent DataArrival("PM: (" & strWord(0).Replace(":", "") & ") " & strMsg)
