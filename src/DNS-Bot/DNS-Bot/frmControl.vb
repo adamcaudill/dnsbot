@@ -388,10 +388,7 @@ Public Class frmControl
         End Select
     End Sub
 
-    Private Sub IRC_ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelJoin
-        IRC.SendMessage("Hello " & UserName, strChannel)
-        IRC.Send("NAMES " & IRC.Channel)
-    End Sub
+
 
     Private Sub ProcMap(ByVal Data As String)
         Static blnMapStarted As Boolean
@@ -578,19 +575,28 @@ Public Class frmControl
     End Sub
 
     Private Sub IRC_NickChange(ByVal UserName As String, ByVal UserName2 As String, ByVal strUserMask As String) Handles IRC.NickChange
-        If Mid$(UserName2, 1, Len(UserName2) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname)) Then
+        If Mid$(UserName2, 1, Len(UserName2) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1) Then
             IRC.Send("NAMES " & IRC.Channel)
         End If
 
     End Sub
 
     Private Sub IRC_ChannelPart(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelPart
-        If Mid$(UserName, 1, Len(UserName) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname)) Then
+        If Mid$(UserName, 1, Len(UserName) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1) Then
             IRC.Send("NAMES " & IRC.Channel)
         End If
     End Sub
     Private Sub IRC_ChannelQuit(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelPart
-        If Mid$(UserName, 1, Len(UserName) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname)) Then
+        If Mid$(UserName, 1, Len(UserName) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1) Then
+            IRC.Send("NAMES " & IRC.Channel)
+        End If
+    End Sub
+
+    Private Sub IRC_ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelJoin
+        Debug.WriteLine(Mid$(UserName, 1, Len(UserName) - 1) & vbTab & Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1))
+
+        If Mid$(UserName, 1, Len(UserName) - 1) = Mid$(IRC.Nickname, 1, Len(IRC.Nickname) - 1) Then
+            IRC.SendMessage("Hello " & UserName, strChannel)
             IRC.Send("NAMES " & IRC.Channel)
         End If
     End Sub
@@ -598,6 +604,7 @@ Public Class frmControl
     Private Sub txtReceived_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtReceived.TextChanged
         txtReceived.SelectionStart = Len(txtReceived.Text)
     End Sub
+
 
     Private Sub tmrChallenge(ByVal nick As String)
         System.Threading.Thread.CurrentThread.Sleep(6000)
