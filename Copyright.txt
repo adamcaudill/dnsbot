@@ -1,5 +1,8 @@
 DNS-Bot is the collective work of many people, here are some of those great people:
 
 Adam Caudill
+
+Writers of code that is no longer is use, nor is deivitives thereof:
+
 Paul Crocket
 Andrew Radamis
