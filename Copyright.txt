@@ -5,3 +5,5 @@ Andrew Radamis
 Paul Crocket
 Roland De Meester
 Zachary Tong
+
+For more information, please see License.txt included with this package.
