@@ -5,6 +5,7 @@ Public Class cIRC
 
     Public Event DataArrival(ByVal Data As String)
     Public Event ChannelMessage(ByVal Data As String, ByVal strChannel As String, ByVal strUserMask As String)
+    Public Event ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ConnectComplete()
 
     Private m_strVersion As String
@@ -79,7 +80,7 @@ Public Class cIRC
         Do While (m_sckIRC.Connected)
             Dim bytBuffer(4095) As Byte 'BUGBUG -- This limits the max data received at once to 4096 bytes
             m_sckIRC.Receive(bytBuffer)
-            Dim strLines() As String = Text.Encoding.ASCII.GetString(bytBuffer).Split(ControlChars.CrLf)
+            Dim strLines() As String = Text.Encoding.ASCII.GetString(bytBuffer).Replace(Chr(10), "").Split(ControlChars.Cr)
 
             Dim i As Integer
             For i = 0 To strLines.GetUpperBound(0)
@@ -93,7 +94,7 @@ Public Class cIRC
 
                     'Check to see if the first word is the server name
                     'If strWord(0).Substring(2).ToLower = m_strServer Then                ' <----- NOTE: Make sure this line is uncommented. (Adam)
-                    If strWord(0).Substring(2).ToLower = "irc.shadowofthebat.com" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
+                    If strWord(0).ToLower = ":irc.shadowofthebat.com" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
                         'This is a server message
                         If strWord(1) = "NOTICE" Then
                             'Server NOTICE
@@ -108,6 +109,12 @@ Public Class cIRC
                                     Dim strMsg As String
                                     strMsg = strLines(i).Substring(InStr(strLines(i), m_strNickname) + m_strNickname.Length + 1)
                                     RaiseEvent DataArrival("Sever: Welcome. (" & strMsg & ")")
+                                Case 6
+                                    Dim strMsg As String
+                                    strMsg = strLines(i).Substring(InStr(strLines(i), m_strNickname) + m_strNickname.Length + 1)
+                                    RaiseEvent DataArrival("MAP: " & strMsg)
+                                Case 7
+                                    RaiseEvent DataArrival("MAP: End of /MAP")
                                 Case 2, 3, 251, 255, 265, 266
                                     'Host info
                                     Dim strMsg As String
@@ -142,39 +149,42 @@ Public Class cIRC
                         Send("PONG " & strWord(1).Replace(":", ""))
                     ElseIf strWord(0).StartsWith(":") Then
                         'These should all be messages
-                        If strWord(1) = "PRIVMSG" Then
-                            'Received a message
-                            If strWord(3) = ":" & Chr(1) & "ACTION" Then
-                                'Action
-                                Dim strMsg As String
-                                strMsg = strLines(i).Substring(InStr(strLines(i), strWord(3)) + strWord(3).Length).Replace(Chr(1), "")
-                                RaiseEvent DataArrival(strWord(2) & ": (" & strWord(0).Replace(":", "") & ") [Action] " & strMsg)
-                            ElseIf strWord(3) = ":" & Chr(1) & "PING" Then
-                                'CTCP ping request
-                                Dim strUserName As String
-                                strUserName = strWord(0).Replace(":", "").Substring(0, InStr(strWord(0).Replace(":", ""), "!") - 1)
-                                Send("NOTICE " & strUserName & " :" & Chr(1) & "PING " & strWord(4))
-                                RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP PING")
-                            ElseIf strWord(3) = ":" & Chr(1) & "TIME" & Chr(1) Then
-                                'CTCP time request
-                                Dim strUserName As String
-                                strUserName = strWord(0).Replace(":", "").Substring(0, InStr(strWord(0).Replace(":", ""), "!") - 1)
-                                Send("NOTICE " & strUserName & " :" & Chr(1) & "TIME " & Now & Chr(1))
-                                RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP TIME")
-                            ElseIf strWord(3) = ":" & Chr(1) & "VERSION" & Chr(1) Then
-                                'CTCP Version request
-                                Dim strUserName As String
-                                strUserName = strWord(0).Replace(":", "").Substring(0, InStr(strWord(0).Replace(":", ""), "!") - 1)
-                                Send("NOTICE " & strUserName & " :" & Chr(1) & "VERSION " & m_strVersion & Chr(1))
-                                RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP VERSION")
-                            Else
-                                'Normal channel message
-                                Dim strMsg As String
-                                strMsg = strLines(i).Substring(InStr(strLines(i), strWord(2)) + strWord(2).Length + 1)
-                                RaiseEvent DataArrival(strWord(2) & ": (" & strWord(0).Replace(":", "") & ") " & strMsg)
-                                RaiseEvent ChannelMessage(strMsg, strWord(2), strWord(0).Replace(":", ""))
-                            End If
-                        End If
+                        Dim strUserName As String
+                        strUserName = strWord(0).Replace(":", "").Substring(0, InStr(strWord(0).Replace(":", ""), "!") - 1)
+                        Select Case strWord(1)
+                            Case "PRIVMSG"
+                                'Received a message
+                                If strWord(3) = ":" & Chr(1) & "ACTION" Then
+                                    'Action
+                                    Dim strMsg As String
+                                    strMsg = strLines(i).Substring(InStr(strLines(i), strWord(3)) + strWord(3).Length).Replace(Chr(1), "")
+                                    RaiseEvent DataArrival(strWord(2) & ": (" & strWord(0).Replace(":", "") & ") [Action] " & strMsg)
+                                ElseIf strWord(3) = ":" & Chr(1) & "PING" Then
+                                    'CTCP ping request
+                                    Send("NOTICE " & strUserName & " :" & Chr(1) & "PING " & strWord(4))
+                                    RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP PING")
+                                ElseIf strWord(3) = ":" & Chr(1) & "TIME" & Chr(1) Then
+                                    'CTCP time request
+                                    Send("NOTICE " & strUserName & " :" & Chr(1) & "TIME " & Now & Chr(1))
+                                    RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP TIME")
+                                ElseIf strWord(3) = ":" & Chr(1) & "VERSION" & Chr(1) Then
+                                    'CTCP Version request
+                                    Send("NOTICE " & strUserName & " :" & Chr(1) & "VERSION " & m_strVersion & Chr(1))
+                                    RaiseEvent DataArrival(strWord(0).Replace(":", "") & ": CTCP VERSION")
+                                Else
+                                    'Normal channel message
+                                    Dim strMsg As String
+                                    strMsg = strLines(i).Substring(InStr(strLines(i), strWord(2)) + strWord(2).Length + 1)
+                                    RaiseEvent DataArrival(strWord(2) & ": (" & strWord(0).Replace(":", "") & ") " & strMsg)
+                                    RaiseEvent ChannelMessage(strMsg, strWord(2), strWord(0).Replace(":", ""))
+                                End If
+                            Case "JOIN"
+                                'a user has joinded a channel
+                                RaiseEvent DataArrival(strWord(2).Replace(":", "") & ": JOIN: " & strWord(0).Replace(":", ""))
+                                If strUserName <> m_strNickname Then
+                                    RaiseEvent ChannelJoin(strUserName, strWord(2).Replace(":", ""), strWord(0).Replace(":", ""))
+                                End If
+                        End Select
                     End If
                 End If
             Next
@@ -214,5 +224,10 @@ Public Class cIRC
         Send("QUIT :" & strReason)
         m_sckIRC.Close()
         RaiseEvent DataArrival("***Connection Closed")
+    End Sub
+
+    Public Sub ChangeNick(ByVal strNick As String)
+        Send("NICK :" & strNick)
+        m_strNickname = strNick
     End Sub
 End Class
