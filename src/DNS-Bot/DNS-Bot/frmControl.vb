@@ -98,195 +98,234 @@ Public Class frmControl
 
     Private Sub IRC_ChannelMessage(ByVal Data As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelMessage
         Dim strWord() As String = Data.Split(" ")
-        Select Case strChannel.ToLower
-            Case "#dns-bot"
-                Select Case strWord(0).ToLower
-                    Case "!exit"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            SaveSettings()
-                            IRC.Quit("Leaving(Exit(" & strUserMask & "))[http://sourceforge.net/projects/dnsbot/]")
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
+
+        ' <Added by: Adam at: 7/11/2004-05:44:24 on machine: BALLER-STA1>
+        'This will support thr new MultiBot mode & accept commands prefixed with the bot name
+        If strWord(0) = IRC.Nickname Then
+            Data = Data.Substring(InStr(Data, IRC.Nickname) + IRC.Nickname.Length)
+            strWord = Data.Split(" ")
+        ElseIf strWord(0) = IRC.Nickname & ":" Then
+            Data = Data.Substring(InStr(Data, IRC.Nickname) + IRC.Nickname.Length + 1)
+            strWord = Data.Split(" ")
+        Else
+            If CBool(Settings.GetConfigInfo("General", "MultiBot", False)(1)) = True Then
+                Exit Sub
+            End If
+        End If
+        ' </Added by: Adam at: 7/11/2004-05:44:25 on machine: BALLER-STA1>
+
+        Select Case strWord(0).ToLower
+            Case "!exit"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    SaveSettings()
+                    IRC.Quit("Leaving(Exit(" & strUserMask & "))[http://sourceforge.net/projects/dnsbot/]")
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!resolve", "!dns"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    IRC.SendMessage(strWord(1) & " is " & System.Net.Dns.Resolve(strWord(1)).AddressList(0).ToString, strChannel)
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!hm"
+                IRC.SendMessage("Your hostmask is " & strUserMask, strChannel)
+            Case "!die"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    SaveSettings()
+                    IRC.Quit("Leaving(Die(" & strUserMask & "))[http://sourceforge.net/projects/dnsbot/]")
+                    Application.Exit()
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!about"
+                IRC.SendMessage("I'm DNS-Bot(v" & Application.ProductVersion & "), a load-balancing system for IRC servers that is free & licensed under the GPL. For more information go to http://sourceforge.net/projects/dnsbot/", strChannel)
+                IRC.SendMessage("- Developers: Adam Caudill, Zachary Tong - Special Thanks: Andrew Radamis, Paul Crocket, Roland De Meester, OpenIRCNet & everybody else that has helped!", strChannel)
+            Case "!nick"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    IRC.SendMessage("Changing name to: " & strWord(1), strChannel)
+                    IRC.ChangeNick(strWord(1))
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!map"
+                Dim strMsg As String
+                Dim i As Long
+                For i = 0 To UBound(tServer)
+                    If Len(strMsg) <> 0 Then
+                        strMsg = strMsg & " | "
+                    End If
+                    strMsg += "Server: " & tServer(i).Name & "[" & tServer(i).IP & "] Load: " & tServer(i).Load
+                    If tServer(i).Ignore = True Then
+                        strMsg += " (IGNORED)"
+                    End If
+                Next i
+                IRC.SendMessage(strMsg, strChannel)
+            Case "!highload"
+                IRC.SendMessage("Server with the highest load is " & tServer(GetServerHighLoadAsInt()).Name & " at " & tServer(GetServerHighLoadAsInt()).Load & " users.", strChannel)
+            Case "!lowload"
+                IRC.SendMessage("Server with the lowest load is " & tServer(GetServerLowLoadAsInt()).Name & " at " & tServer(GetServerLowLoadAsInt()).Load & " users.", strChannel)
+            Case "!current"
+                IRC.SendMessage("Current server is " & GetCurrentServerAsName(), strChannel)
+            Case "!refresh"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    IRC.SendMessage("Reloading /MAP Data.", strChannel)
+                    IRC.Send("MAP")
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!ignore"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    Dim i As Long
+                    Dim intServer As Integer
+                    For i = 0 To UBound(tServer)
+                        If tServer(i).name = strWord(1) Then
+                            intServer = i + 1
                         End If
-                    Case "!resolve", "!dns"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            IRC.SendMessage(strWord(1) & " is " & System.Net.Dns.Resolve(strWord(1)).AddressList(0).ToString, strChannel)
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                    Next
+                    If intServer <> 0 Then
+                        tServer(intServer - 1).Ignore = True
+                        Settings.WriteConfigInfo("Ingore", tServer(intServer - 1).Name, True)
+                        IRC.SendMessage("Server added to ignore: " & tServer(intServer - 1).Name, strChannel)
+                    Else
+                        IRC.SendMessage("Unknown server: " & strWord(1), strChannel)
+                    End If
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!unignore"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    Dim i As Long
+                    Dim intServer As Integer
+                    For i = 0 To UBound(tServer)
+                        If tServer(i).name = strWord(1) Then
+                            intServer = i + 1
                         End If
-                    Case "!hm"
-                        IRC.SendMessage("Your hostmask is " & strUserMask, strChannel)
-                    Case "!die"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            SaveSettings()
-                            IRC.Quit("Leaving(Die(" & strUserMask & "))[http://sourceforge.net/projects/dnsbot/]")
-                            Application.Exit()
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                    Next
+                    If intServer <> 0 Then
+                        tServer(intServer - 1).Ignore = False
+                        Settings.WriteConfigInfo("Ingore", tServer(intServer - 1).Name, False)
+                        IRC.SendMessage("Server removed from ignore: " & tServer(intServer - 1).Name, strChannel)
+                    Else
+                        IRC.SendMessage("Unknown server: " & strWord(1), strChannel)
+                    End If
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!auth"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    Settings.WriteConfigInfo("Auth", strWord(1), True)
+                    IRC.SendMessage("User added.", strChannel)
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!unauth"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    Settings.WriteConfigInfo("Auth", strWord(1), False)
+                    IRC.SendMessage("User removed.", strChannel)
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!mode"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    If blnTestMode = True Then
+                        IRC.SendMessage("Running in test mode, changes WILL NOT be applied.", strChannel)
+                    Else
+                        IRC.SendMessage("Running in live mode, changes WILL be applied.", strChannel)
+                    End If
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!setmode"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    If strWord(1).ToLower = "test" Then
+                        blnTestMode = True
+                    Else
+                        blnTestMode = False
+                    End If
+                    Settings.WriteConfigInfo("General", "TestMode", blnTestMode)
+                    IRC.SendMessage("Run mode set.", strChannel)
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+            Case "!help"
+                If strWord.GetUpperBound(0) = 0 Then
+                    IRC.SendMessage("DNS-Bot Help:", strChannel)
+                    IRC.SendMessage("!exit, !resolve, !dns, !hm, !about, !die, !nick, !map, !highload, !lowload, !current, !refresh, !ignore, !unignore, !auth, !unauth, !mode, !setmode, !users", strChannel)
+                Else
+                    Select Case strWord(1)
+                        Case "!exit"
+                            IRC.SendMessage("!exit - Discconects from the server but leaves the application running", strChannel)
+                        Case "!resolve", "!dns"
+                            IRC.SendMessage("!resolve - Resolves a domain to a IP address. Syntax: !resolve www.google.com", strChannel)
+                        Case "!hm"
+                            IRC.SendMessage("!hm - Resolves a domain to a IP address", strChannel)
+                        Case "!about"
+                            IRC.SendMessage("!about - Displays information about DNS-Bot", strChannel)
+                        Case "!die"
+                            IRC.SendMessage("!die - Discconects from the server and terminates the application", strChannel)
+                        Case "!nick"
+                            IRC.SendMessage("!nick - Changes the bot's nickname. Syntax: !nick NewName", strChannel)
+                        Case "!map"
+                            IRC.SendMessage("!map - Displays the parsed map data", strChannel)
+                        Case "!highload"
+                            IRC.SendMessage("!highload - Displays the server with the highest load", strChannel)
+                        Case "!lowload"
+                            IRC.SendMessage("!lowload - Displays the server with the lowest load", strChannel)
+                        Case "!current"
+                            IRC.SendMessage("!current - Displays the current server", strChannel)
+                        Case "!refresh"
+                            IRC.SendMessage("!refresh - Reloads the MAP data", strChannel)
+                        Case "!ignore"
+                            IRC.SendMessage("!ignore - Adds a server to the ignore list. Syntax: !ignore irc.server.tld", strChannel)
+                        Case "!unignore"
+                            IRC.SendMessage("!unignore - Removes a server from the ignore list. Syntax: !unignore irc.server.tld", strChannel)
+                        Case "!auth"
+                            IRC.SendMessage("!auth - Adds a user to the auth list. Syntax: !auth Nick!name@domain.tld", strChannel)
+                        Case "!unauth"
+                            IRC.SendMessage("!unauth - Removes a user from the auth list. Syntax: !unauth Nick!name@domain.tld", strChannel)
+                        Case "!mode"
+                            IRC.SendMessage("!mode - Displays the current running mode", strChannel)
+                        Case "!setmode"
+                            IRC.SendMessage("!setmode - Sets the current running mode. Syntax: !setmode test", strChannel)
+                        Case "!users"
+                            IRC.SendMessage("!users - Shows the number of users on the network", strChannel)
+                    End Select
+                End If
+            Case "!users"
+                '***********************
+                'Added by Excaliber
+                '7/10/04
+                'Simply determines total number of users and displays
+                '***********************
+                Dim i As Int32, sum As Int32
+                For i = 0 To tServer.GetUpperBound(0)
+                    sum += tServer(i).Load
+                Next
+                IRC.SendMessage("There are currently " & sum & " users on " & tServer.GetUpperBound(0) + 1 & " servers", strChannel)
+            Case "!multibot"
+                ' <Added by: Adam at: 7/11/2004-05:46:00 on machine: BALLER-STA1>
+                'MultiBot suport
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    If strWord.GetUpperBound(0) = 1 Then
+                        If strWord(1).ToLower = "on" Then
+                            Settings.WriteConfigInfo("General", "MultiBot", True)
+                            IRC.SendMessage("I'm now running in MultiBot mode", strChannel)
+                        ElseIf strWord(1).ToLower = "off" Then
+                            Settings.WriteConfigInfo("General", "MultiBot", False)
+                            IRC.SendMessage("I'm now running in single bot mode", strChannel)
                         End If
-                    Case "!about"
-                        IRC.SendMessage("I'm DNS-Bot, created by Adam Caudill with the help of several great people. For more information go to http://sourceforge.net/projects/dnsbot/ - DNS-Bot (v" & Application.ProductVersion & ")", strChannel)
-                    Case "!nick"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            IRC.SendMessage("Changing name to: " & strWord(1), strChannel)
-                            IRC.ChangeNick(strWord(1))
+                    Else
+                        If CBool(Settings.GetConfigInfo("General", "MultiBot", False)(1)) = True Then
+                            IRC.SendMessage("I'm currently running in MultiBot mode", strChannel)
                         Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                            IRC.SendMessage("I'm currently running in single bot mode", strChannel)
                         End If
-                    Case "!map"
-                        Dim strMsg As String
-                        Dim i As Long
-                        For i = 0 To UBound(tServer)
-                            If Len(strMsg) <> 0 Then
-                                strMsg = strMsg & " | "
-                            End If
-                            strMsg += "Server: " & tServer(i).Name & "[" & tServer(i).IP & "] Load: " & tServer(i).Load
-                            If tServer(i).Ignore = True Then
-                                strMsg += " (IGNORED)"
-                            End If
-                        Next i
-                        IRC.SendMessage(strMsg, strChannel)
-                    Case "!highload"
-                        IRC.SendMessage("Server with the highest load is " & tServer(GetServerHighLoadAsInt()).Name & " at " & tServer(GetServerHighLoadAsInt()).Load & " users.", strChannel)
-                    Case "!lowload"
-                        IRC.SendMessage("Server with the lowest load is " & tServer(GetServerLowLoadAsInt()).Name & " at " & tServer(GetServerLowLoadAsInt()).Load & " users.", strChannel)
-                    Case "!current"
-                        IRC.SendMessage("Current server is " & GetCurrentServerAsName(), strChannel)
-                    Case "!refresh"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            IRC.SendMessage("Reloading /MAP Data.", strChannel)
-                            IRC.Send("MAP")
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                        End If
-                    Case "!ignore"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            Dim i As Long
-                            Dim intServer As Integer
-                            For i = 0 To UBound(tServer)
-                                If tServer(i).name = strWord(1) Then
-                                    intServer = i + 1
-                                End If
-                            Next
-                            If intServer <> 0 Then
-                                tServer(intServer - 1).Ignore = True
-                                Settings.WriteConfigInfo("Ingore", tServer(intServer - 1).Name, True)
-                                IRC.SendMessage("Server added to ignore: " & tServer(intServer - 1).Name, strChannel)
-                            Else
-                                IRC.SendMessage("Unknown server: " & strWord(1), strChannel)
-                            End If
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                        End If
-                    Case "!unignore"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            Dim i As Long
-                            Dim intServer As Integer
-                            For i = 0 To UBound(tServer)
-                                If tServer(i).name = strWord(1) Then
-                                    intServer = i + 1
-                                End If
-                            Next
-                            If intServer <> 0 Then
-                                tServer(intServer - 1).Ignore = False
-                                Settings.WriteConfigInfo("Ingore", tServer(intServer - 1).Name, False)
-                                IRC.SendMessage("Server removed from ignore: " & tServer(intServer - 1).Name, strChannel)
-                            Else
-                                IRC.SendMessage("Unknown server: " & strWord(1), strChannel)
-                            End If
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                        End If
-                    Case "!auth"
-                        If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                            Settings.WriteConfigInfo("Auth", strWord(1), True)
-                            IRC.SendMessage("User added.", strChannel)
-                        Else
-                            IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                        End If
-                    Case "!unauth"
-                            If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                                Settings.WriteConfigInfo("Auth", strWord(1), False)
-                                IRC.SendMessage("User removed.", strChannel)
-                            Else
-                                IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                            End If
-                    Case "!mode"
-                            If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                                If blnTestMode = True Then
-                                    IRC.SendMessage("Running in test mode, changes WILL NOT be applied.", strChannel)
-                                Else
-                                    IRC.SendMessage("Running in live mode, changes WILL be applied.", strChannel)
-                                End If
-                            Else
-                                IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                            End If
-                    Case "!setmode"
-                            If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
-                                If strWord(1).ToLower = "test" Then
-                                    blnTestMode = True
-                                Else
-                                    blnTestMode = False
-                                End If
-                                Settings.WriteConfigInfo("General", "TestMode", blnTestMode)
-                                IRC.SendMessage("Run mode set.", strChannel)
-                            Else
-                                IRC.SendMessage("You are not authorized to use this command.", strChannel)
-                            End If
-                    Case "!help"
-                            If strWord.GetUpperBound(0) = 0 Then
-                                IRC.SendMessage("DNS-Bot Help:", strChannel)
-                                IRC.SendMessage("!exit, !resolve, !dns, !hm, !about, !die, !nick, !map, !highload, !lowload, !current, !refresh, !ignore, !unignore, !auth, !unauth, !mode, !setmode", strChannel)
-                            Else
-                                Select Case strWord(1)
-                                    Case "!exit"
-                                        IRC.SendMessage("!exit - Discconects from the server but leaves the application running", strChannel)
-                                    Case "!resolve", "!dns"
-                                        IRC.SendMessage("!resolve - Resolves a domain to a IP address. Syntax: !resolve www.google.com", strChannel)
-                                    Case "!hm"
-                                        IRC.SendMessage("!hm - Resolves a domain to a IP address", strChannel)
-                                    Case "!about"
-                                        IRC.SendMessage("!about - Displays information about DNS-Bot", strChannel)
-                                    Case "!die"
-                                        IRC.SendMessage("!die - Discconects from the server and terminates the application", strChannel)
-                                    Case "!nick"
-                                        IRC.SendMessage("!nick - Changes the bot's nickname. Syntax: !nick NewName", strChannel)
-                                    Case "!map"
-                                        IRC.SendMessage("!map - Displays the parsed map data", strChannel)
-                                    Case "!highload"
-                                        IRC.SendMessage("!highload - Displays the server with the highest load", strChannel)
-                                    Case "!lowload"
-                                        IRC.SendMessage("!lowload - Displays the server with the lowest load", strChannel)
-                                    Case "!current"
-                                        IRC.SendMessage("!current - Displays the current server", strChannel)
-                                    Case "!refresh"
-                                        IRC.SendMessage("!refresh - Reloads the MAP data", strChannel)
-                                    Case "!ignore"
-                                        IRC.SendMessage("!ignore - Adds a server to the ignore list. Syntax: !ignore irc.server.tld", strChannel)
-                                    Case "!unignore"
-                                        IRC.SendMessage("!unignore - Removes a server from the ignore list. Syntax: !unignore irc.server.tld", strChannel)
-                                    Case "!auth"
-                                        IRC.SendMessage("!auth - Adds a user to the auth list. Syntax: !auth Nick!name@domain.tld", strChannel)
-                                    Case "!unauth"
-                                        IRC.SendMessage("!unauth - Removes a user from the auth list. Syntax: !unauth Nick!name@domain.tld", strChannel)
-                                    Case "!mode"
-                                        IRC.SendMessage("!mode - Displays the current running mode", strChannel)
-                                    Case "!setmode"
-                                        IRC.SendMessage("!setmode - Sets the current running mode. Syntax: !setmode test", strChannel)
-                                End Select
-                            End If
-                    Case "!users"
-                        '***********************
-                        'Added by Excaliber
-                        '7/10/04
-                        'Simply determines total number of users and displays
-                        '***********************
-                        Dim i As Int32, sum As Int32
-                        For i = 0 To tServer.GetUpperBound(0)
-                            sum += tServer(i).Load
-                        Next
-                        IRC.SendMessage("There are currently " & sum & " global users on OpenIRCNet", strChannel)
-                End Select
+                    End If
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+                ' </Added by: Adam at: 7/11/2004-05:46:00 on machine: BALLER-STA1>
         End Select
     End Sub
 
@@ -303,9 +342,9 @@ Public Class frmControl
                 blnMapStarted = True
                 ReDim tServer(0)
             Else
-                ReDim Preserve tServer(UBound(tServer) + 1)
+                ReDim Preserve tServer(tServer.GetUpperBound(0) + 1)
             End If
-            Data = Mid(Data, InStr(Data, "MAP:") + 5)
+            Data = Data.Substring(InStr(Data, "MAP:") + 4)
             Data = Data.Replace("(", "")
             Data = Data.Replace(")", "")
             Data = Data.Replace("|-", "")
@@ -328,17 +367,16 @@ Public Class frmControl
     End Sub
 
     Private Sub frmControl_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
-        blnTestMode = Settings.GetConfigInfo("General", "TestMode", False)(1)
-        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-Dev-ex")(1)
+        blnTestMode = CBool(Settings.GetConfigInfo("General", "TestMode", False)(1))
+        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-Bot")(1)
         IRC.Server = Settings.GetConfigInfo("Network", "Server", "openircnet.ath.cx")(1)
         IRC.Port = Settings.GetConfigInfo("Network", "Port", "6667")(1)
-        IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Dev-Bot-ex")(1)
+        IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
         IRC.Connect()
-
     End Sub
 
-    Public Function AppPath() As String
+    Private Function AppPath() As String
         Return System.AppDomain.CurrentDomain.BaseDirectory()
     End Function
 
@@ -352,7 +390,7 @@ Public Class frmControl
     Private Sub tmrRefresh_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles tmrRefresh.Tick
         IRC.Send("MAP")
         Application.DoEvents()
-        If GetCurrentServerAsInt() <> -1 Then
+        If GetCurrentServerAsInt() <> -1 Or tServer(GetCurrentServerAsInt()).Ignore = False Then
             If GetCurrentServerAsInt() <> GetServerLowLoadAsInt() Then
                 If tServer(GetCurrentServerAsInt).Load > tServer(GetServerLowLoadAsInt).Load Then
                     SetCurrentServerByInt(GetServerLowLoadAsInt())
@@ -399,7 +437,7 @@ Public Class frmControl
         Dim i As Long
         Dim intHigh As Integer
         For i = 1 To tServer.GetUpperBound(0)
-            If tServer(i).Load > tServer(intHigh).Load Then
+            If tServer(i).Load > tServer(intHigh).Load And tServer(i).Ignore = False Then
                 intHigh = i
             End If
         Next
@@ -410,7 +448,7 @@ Public Class frmControl
         Dim i As Long
         Dim intLow As Integer
         For i = 1 To tServer.GetUpperBound(0)
-            If tServer(i).Load < tServer(intLow).Load Then
+            If tServer(i).Load < tServer(intLow).Load And tServer(i).Ignore = False Then
                 intLow = i
             End If
         Next
