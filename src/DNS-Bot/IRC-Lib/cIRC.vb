@@ -3,7 +3,10 @@ Imports System.Threading
 
 Public Class cIRC
 
+    Public Event NickChange(ByVal UserName As String, ByVal strNewUserName As String, ByVal strUserMask As String)
     Public Event DataArrival(ByVal Data As String)
+    Public Event DataArrival_StrArray(ByVal Data() As String)
+    Public Event PrivateMessage(ByVal Data As String, ByVal strRecievedFrom As String, ByVal strUserMask As String)
     Public Event ChannelMessage(ByVal Data As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ConnectComplete()
@@ -21,6 +24,10 @@ Public Class cIRC
     Private m_strServer As String
 
     Private m_sckIRC As Socket
+
+    Private m_strChannel As String
+
+
 
     Public Property Server() As String
         Get
@@ -40,6 +47,12 @@ Public Class cIRC
         End Set
     End Property
 
+    Public ReadOnly Property Channel() As String
+        Get
+            Return m_strChannel
+        End Get
+    End Property
+
     Public Property Nickname() As String
         Get
             Return m_strNickname
@@ -48,6 +61,8 @@ Public Class cIRC
             m_strNickname = Value
         End Set
     End Property
+
+
 
     Public Property RealName() As String
         Get
@@ -94,7 +109,7 @@ Public Class cIRC
 
                     'Check to see if the first word is the server name
                     'If strWord(0).Substring(2).ToLower = m_strServer Then                ' <----- NOTE: Make sure this line is uncommented. (Adam)
-                    If strWord(0).ToLower = ":irc.shadowofthebat.com" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
+                    If strWord(0).ToLower = ":polyfractal.ath.cx" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
                         'This is a server message
                         If strWord(1) = "NOTICE" Then
                             'Server NOTICE
@@ -142,7 +157,13 @@ Public Class cIRC
                                     'End of MOTD
                                     RaiseEvent DataArrival("MOTD: End of MOTD")
                                     RaiseEvent ConnectComplete()
+                                Case 353
+                                    'Raise NAMES
+                                    RaiseEvent DataArrival_StrArray(strWord)
+                                Case Else
+                                    'Debug.WriteLine("------" & strWord(3) & " " & strWord(4) & " " & strWord(1) & "-------")
                             End Select
+
                         End If
                     ElseIf strWord(0).EndsWith("PING") = True Then
                         'Server is PINGING us, better ping back
@@ -179,6 +200,7 @@ Public Class cIRC
                                     Dim strMsg As String
                                     strMsg = strLines(i).Substring(InStr(strLines(i), strWord(2)) + strWord(2).Length + 1)
                                     RaiseEvent DataArrival("PM: (" & strWord(0).Replace(":", "") & ") " & strMsg)
+                                    RaiseEvent PrivateMessage(strMsg, Left$(strWord(0).Replace(":", ""), InStr(strWord(0).Replace(":", ""), "!") - 1), strWord(0).Replace(":", ""))
                                 Else
                                     'Normal channel message
                                     Dim strMsg As String
@@ -191,6 +213,13 @@ Public Class cIRC
                                 RaiseEvent DataArrival(strWord(2).Replace(":", "") & ": JOIN: " & strWord(0).Replace(":", ""))
                                 If strUserName <> m_strNickname Then
                                     RaiseEvent ChannelJoin(strUserName, strWord(2).Replace(":", ""), strWord(0).Replace(":", ""))
+                                End If
+
+                            Case "NICK"
+                                'a user has changed his nick
+                                RaiseEvent DataArrival(strUserName & ": NICK: " & strWord(2).Replace(":", "") & "  " & strWord(0).Replace(":", ""))
+                                If strUserName <> m_strNickname Then
+                                    RaiseEvent NickChange(strUserName, strWord(2).Replace(":", ""), strWord(0).Replace(":", ""))
                                 End If
                         End Select
                     End If
@@ -205,6 +234,10 @@ Public Class cIRC
 
     Public Sub SendMessage(ByVal strCommand As String, ByVal strTarget As String)
         m_sckIRC.Send(Text.Encoding.ASCII.GetBytes("PRIVMSG " & strTarget & " :" & strCommand & ControlChars.CrLf))
+    End Sub
+
+    Public Sub Raw(ByVal data As String)
+        m_sckIRC.Send(Text.Encoding.ASCII.GetBytes(data & ControlChars.CrLf))
     End Sub
 
     Public Sub Connect()
@@ -225,7 +258,24 @@ Public Class cIRC
 
     Public Sub Join(ByVal strChannel As String, Optional ByVal strParams As String = "")
         Send("JOIN " & strChannel & " " & strParams)
+        m_strChannel = strChannel
         RaiseEvent DataArrival("Join: Attempting to join " & strChannel)
+    End Sub
+
+    Public Sub PartJoin(ByVal strChannel As String, Optional ByVal strParams As String = "")
+        Send("PART " & m_strChannel)
+        m_strChannel = ""
+        RaiseEvent DataArrival("PART: Attempting to part " & m_strChannel)
+
+        Send("JOIN " & strChannel & " " & strParams)
+        m_strChannel = strChannel
+        RaiseEvent DataArrival("Join: Attempting to join " & strChannel)
+    End Sub
+
+    Public Sub ReJoin(Optional ByVal strParams As String = "")
+        Send("PART " & m_strChannel)
+        Send("JOIN " & m_strChannel & " " & strParams)
+        RaiseEvent DataArrival("Join: Attempting to rejoin " & m_strChannel)
     End Sub
 
     Public Sub Quit(Optional ByVal strReason As String = "Leaving()")
