@@ -10,6 +10,7 @@ Public Class cIRC
     Public Event ChannelMessage(ByVal Data As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ChannelPart(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
+    Public Event ChannelQuit(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ConnectComplete()
 
     Private m_strVersion As String
@@ -220,6 +221,12 @@ Public Class cIRC
                                 End If
 
                             Case "PART"
+                                'a user has joinded a channel
+                                RaiseEvent DataArrival(strWord(2).Replace(":", "") & ": PART: " & strWord(0).Replace(":", ""))
+                                If strUserName <> m_strNickname Then
+                                    RaiseEvent ChannelPart(strUserName, strWord(2).Replace(":", ""), strWord(0).Replace(":", ""))
+                                End If
+                            Case "QUIT"
                                 'a user has joinded a channel
                                 RaiseEvent DataArrival(strWord(2).Replace(":", "") & ": PART: " & strWord(0).Replace(":", ""))
                                 If strUserName <> m_strNickname Then
