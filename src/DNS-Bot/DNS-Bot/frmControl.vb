@@ -275,21 +275,17 @@ Public Class frmControl
                                         IRC.SendMessage("!setmode - Sets the current running mode. Syntax: !setmode test", strChannel)
                                 End Select
                             End If
-
-
-                            '***********************
-                            'Added by Excaliber
-                            '7/10/04
-                            'Simply determines total number of users and displays
-                            '***********************
                     Case "!users"
-                            Dim i As Int32, sum As Int32
-                            For i = 0 To UBound(tServer)
-                                sum += tServer(i).Load
-                            Next
-                            IRC.SendMessage("There are currently " & sum & " global users on OpenIRCNet", strChannel)
-
-
+                        '***********************
+                        'Added by Excaliber
+                        '7/10/04
+                        'Simply determines total number of users and displays
+                        '***********************
+                        Dim i As Int32, sum As Int32
+                        For i = 0 To tServer.GetUpperBound(0)
+                            sum += tServer(i).Load
+                        Next
+                        IRC.SendMessage("There are currently " & sum & " global users on OpenIRCNet", strChannel)
                 End Select
         End Select
     End Sub
@@ -339,7 +335,7 @@ Public Class frmControl
         IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Dev-Bot-ex")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
         IRC.Connect()
-        
+
     End Sub
 
     Public Function AppPath() As String
@@ -371,7 +367,7 @@ Public Class frmControl
         Dim strCurrentIP As String = System.Net.Dns.Resolve("openircnet.ath.cx").AddressList(0).ToString
         Dim i As Long
         Dim intCurrent As Integer
-        For i = 0 To UBound(tServer)
+        For i = 0 To tServer.GetUpperBound(0)
             If tServer(i).IP = strCurrentIP Then
                 intCurrent = i + 1
             End If
@@ -402,7 +398,7 @@ Public Class frmControl
     Private Function GetServerHighLoadAsInt() As Integer
         Dim i As Long
         Dim intHigh As Integer
-        For i = 1 To UBound(tServer)
+        For i = 1 To tServer.GetUpperBound(0)
             If tServer(i).Load > tServer(intHigh).Load Then
                 intHigh = i
             End If
@@ -413,7 +409,7 @@ Public Class frmControl
     Private Function GetServerLowLoadAsInt() As Integer
         Dim i As Long
         Dim intLow As Integer
-        For i = 1 To UBound(tServer)
+        For i = 1 To tServer.GetUpperBound(0)
             If tServer(i).Load < tServer(intLow).Load Then
                 intLow = i
             End If
