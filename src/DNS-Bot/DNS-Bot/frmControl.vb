@@ -248,7 +248,7 @@ Public Class frmControl
         IRC.Send("MAP")
         IRC.Join("#DNS-Bot")
         Application.DoEvents()
-        IRC.SendMessage("DNS-Bot (v" & Application.ProductVersion & ") Online.", "#DNS-Bot")
+        IRC.SendMessage("Imspire DNS-Bot (v" & Application.ProductVersion & ") Online.", "#DNS-Bot")
         tmrRefresh.Interval = Settings.GetConfigInfo("General", "RefreshDelay", 30)(1) * 1000
         tmrRefresh.Enabled = True
     End Sub
@@ -298,7 +298,7 @@ Public Class frmControl
             Case "!exit"
                 If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
                     SaveSettings()
-                    IRC.Quit("Leaving(Exit(" & strUserMask & "))[http://sourceforge.net/projects/dnsbot/]")
+                    IRC.Quit("Leaving(Exit(" & strUserMask & ")) [http://www.imspire.com/dnsbot/]")
                 Else
                     IRC.SendMessage("You are not authorized to use this command.", strChannel)
                 End If
@@ -313,13 +313,13 @@ Public Class frmControl
             Case "!die"
                 If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
                     SaveSettings()
-                    IRC.Quit("Leaving(Die(" & strUserMask & "))[http://sourceforge.net/projects/dnsbot/]")
+                    IRC.Quit("Leaving(Die(" & strUserMask & ")) [http://www.imspire.com/dnsbot/]")
                     Application.Exit()
                 Else
                     IRC.SendMessage("You are not authorized to use this command.", strChannel)
                 End If
             Case "!about"
-                IRC.SendMessage("I'm DNS-Bot(v" & Application.ProductVersion & "), a load-balancing system for IRC servers that is free & licensed under the GPL. For more information go to http://sourceforge.net/projects/dnsbot/", strChannel)
+                IRC.SendMessage("Imspire DNS-Bot v" & Application.ProductVersion & ", a load-balancing system for IRC servers that is free & licensed under the GPL. For more information go to http://www.imspire.com/dnsbot/", strChannel)
                 IRC.SendMessage("- Developers: Adam Caudill, Zachary Tong - Special Thanks: Andrew Radamis, Paul Crocket, Roland De Meester, OpenIRCNet & everybody else that has helped!", strChannel)
             Case "!nick"
                 If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then

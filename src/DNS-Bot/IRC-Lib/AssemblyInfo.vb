@@ -30,11 +30,11 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("")> 
-<Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("")> 
-<Assembly: AssemblyCopyright("")> 
+<Assembly: AssemblyTitle("Imspire IRC-Lib")> 
+<Assembly: AssemblyDescription("IRC-Lib")> 
+<Assembly: AssemblyCompany("Imspire")> 
+<Assembly: AssemblyProduct("Imspire IRC-Lib")> 
+<Assembly: AssemblyCopyright("Copyright© 2004 Imspire & DNS-Bot Team")> 
 <Assembly: AssemblyTrademark("")> 
 <Assembly: CLSCompliant(True)> 
 

@@ -30,12 +30,11 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("")> 
-<Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("")> 
-<Assembly: AssemblyCopyright("")> 
-<Assembly: AssemblyTrademark("")> 
+<Assembly: AssemblyTitle("Imspire DNS-Bot")> 
+<Assembly: AssemblyDescription("DNS-Bot")> 
+<Assembly: AssemblyCompany("Imspire")> 
+<Assembly: AssemblyProduct("Imspire DNS-Bot")> 
+<Assembly: AssemblyCopyright("Copyright© 2004 Imspire & DNS-Bot Team")> 
 <Assembly: CLSCompliant(True)> 
 
 'The following GUID is for the ID of the typelib if this project is exposed to COM
