@@ -1,6 +1,7 @@
 DNS-Bot is the collective work of many people, here are some of those great people:
 
 Adam Caudill
-Paul Crocket
 Andrew Radamis
+Paul Crocket
 Roland De Meester
+Zachary Tong
