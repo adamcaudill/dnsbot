@@ -9,6 +9,7 @@ Public Class cIRC
     Public Event PrivateMessage(ByVal Data As String, ByVal strRecievedFrom As String, ByVal strUserMask As String)
     Public Event ChannelMessage(ByVal Data As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
+    Public Event ChannelPart(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String)
     Public Event ConnectComplete()
 
     Private m_strVersion As String
@@ -216,6 +217,13 @@ Public Class cIRC
                                 RaiseEvent DataArrival(strUserName & ": NICK: " & strWord(2).Replace(":", "") & "  " & strWord(0).Replace(":", ""))
                                 If strUserName <> m_strNickname Then
                                     RaiseEvent NickChange(strUserName, strWord(2).Replace(":", ""), strWord(0).Replace(":", ""))
+                                End If
+
+                            Case "PART"
+                                'a user has joinded a channel
+                                RaiseEvent DataArrival(strWord(2).Replace(":", "") & ": PART: " & strWord(0).Replace(":", ""))
+                                If strUserName <> m_strNickname Then
+                                    RaiseEvent ChannelPart(strUserName, strWord(2).Replace(":", ""), strWord(0).Replace(":", ""))
                                 End If
                         End Select
                     End If

@@ -122,6 +122,7 @@ Public Class frmControl
             Case "AUTHGRANTED"
                 'we have recieved priority
                 m_blnIsPriority = True
+                IRC.Send("NAMES " & IRC.Channel)
         End Select
     End Sub
 
@@ -432,7 +433,7 @@ Public Class frmControl
         IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
 
-        m_intPriority = Settings.GetConfigInfo("General", "Priority", "1")(1)
+        m_intPriority = Settings.GetConfigInfo("General", "Priority", "2")(1)
         IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-" & m_intPriority)(1)
 
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
@@ -580,6 +581,10 @@ Public Class frmControl
         IRC.Send("NAMES " & IRC.Channel)
     End Sub
 
+    Private Sub IRC_ChannelPart(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelPart
+        IRC.Send("NAMES " & IRC.Channel)
+    End Sub
+
     Private Sub txtReceived_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtReceived.TextChanged
         txtReceived.SelectionStart = Len(txtReceived.Text)
     End Sub
@@ -593,5 +598,7 @@ Public Class frmControl
 
 
     End Sub
+
+
 End Class
 
