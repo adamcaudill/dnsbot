@@ -124,8 +124,8 @@
             </Include>
         </Files>
         <UserProperties
-            XMLCommentsActionBuild = "-1"
             XMLCommentsOutputFile = ""
+            XMLCommentsActionBuild = "-1"
         />
     </VisualBasic>
 </VisualStudioProject>

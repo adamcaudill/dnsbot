@@ -14,7 +14,10 @@ Public Class frmControl
     Private m_intPriority As Int32
     Private m_strPriorityPass As String
     Private m_blnIsPriority As Boolean
+    Private m_strBinaryLocation As String
+
     Delegate Sub otmrChallenge(ByVal Nick As String)
+    Private tmrUpdate As System.Threading.Thread
 
 
     Private Structure Server
@@ -384,6 +387,15 @@ Public Class frmControl
                 Else
                     IRC.SendMessage("You are not authorized to use this command.", strChannel)
                 End If
+            Case "!fetchbinary"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    IRC.SendMessage("Fetching...", strChannel)
+                    Process.Start(System.AppDomain.CurrentDomain.BaseDirectory & "\DNS-Updater.exe")
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+
+
 
         End Select
     End Sub
@@ -425,17 +437,23 @@ Public Class frmControl
 
     Private Sub frmControl_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
         blnTestMode = Settings.GetConfigInfo("General", "TestMode", False)(1)
-        IRC.Server = Settings.GetConfigInfo("Network", "Server", "polyfractal.ath.cx")(1)
+        IRC.Server = Settings.GetConfigInfo("Network", "Server", "openircnet.ath.cx")(1)
         IRC.Port = Settings.GetConfigInfo("Network", "Port", "6667")(1)
         IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
+        m_strBinaryLocation = Settings.GetConfigInfo("Network", "BinaryLocation", "")(1)
 
-        m_intPriority = Settings.GetConfigInfo("General", "Priority", "2")(1)
-        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-" & m_intPriority)(1)
+        m_intPriority = Settings.GetConfigInfo("General", "PriorityValue", "")(1)
+        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-")(1)
+        IRC.Nickname &= m_intPriority
 
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
 
         IRC.Connect()
+
+        tmrUpdate = New System.Threading.Thread(AddressOf Me.AutoUpdate)
+        tmrUpdate.Start()
+
     End Sub
 
     Private Function AppPath() As String
@@ -443,7 +461,7 @@ Public Class frmControl
     End Function
 
     Private Sub SaveSettings()
-        Settings.WriteConfigInfo("General", "NickName", IRC.Nickname)
+        'Settings.WriteConfigInfo("General", "NickName", IRC.Nickname)
         Settings.WriteConfigInfo("Network", "Server", IRC.Server)
         Settings.WriteConfigInfo("Network", "Port", IRC.Port)
         Settings.WriteConfigInfo("General", "Name", IRC.RealName)
@@ -618,6 +636,26 @@ Public Class frmControl
 
     End Sub
 
+    Private Sub AutoUpdate()
+        Dim counter As Int32
+        Do While 1
+            System.Threading.Thread.CurrentThread.Sleep(60000)
+            counter += 1
+            If counter = 60 Then
+                counter = 0
+                Process.Start(System.AppDomain.CurrentDomain.BaseDirectory & "\DNS-Updater.exe")
+            End If
 
+        Loop
+
+
+
+    End Sub
+
+    Private Sub frmControl_Closing(ByVal sender As Object, ByVal e As System.ComponentModel.CancelEventArgs) Handles MyBase.Closing
+        tmrUpdate.Abort()
+        tmrUpdate = Nothing
+
+    End Sub
 End Class
 
