@@ -225,7 +225,7 @@ Public Class frmControl
 
     Private Sub AutoUpdate()
         Dim counter As Int32
-        Do While 1
+        Do While True
             System.Threading.Thread.CurrentThread.Sleep(60000)
             counter += 1
             If counter = 60 Then
@@ -629,6 +629,9 @@ Public Class frmControl
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
 
         IRC.Connect()
+
+        tmrUpdate = New System.Threading.Thread(AddressOf Me.AutoUpdate)
+        tmrUpdate.Start()
     End Sub
 
     Private Sub tmrChallenge(ByVal nick As String)
@@ -662,5 +665,6 @@ Public Class frmControl
         tmrUpdate = Nothing
     End Sub
 #End Region
+
 End Class
 
