@@ -85,4 +85,28 @@ Public Class frmControl
     Private Sub IRC_DataArrival(ByVal Data As String) Handles IRC.DataArrival
         txtReceived.Text += Data & ControlChars.CrLf
     End Sub
+
+    Private Sub IRC_ConnectComplete() Handles IRC.ConnectComplete
+        IRC.Join("#DNS-Bot")
+        Application.DoEvents()
+        IRC.SendMessage("DNS-Bot (" & Application.ProductVersion & ") Online.", "#DNS-Bot")
+    End Sub
+
+    Private Sub IRC_ChannelMessage(ByVal Data As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelMessage
+        Dim strWord() As String = Data.Split(" ")
+        Select Case strChannel.ToLower
+            Case "#dns-bot"
+                Select Case strWord(0).ToLower
+                    Case "!exit"
+                        IRC.Quit("Leaving(Channel Exit(" & strUserMask & "))")
+                    Case "!resolve"
+                        IRC.SendMessage(strWord(1) & " is " & System.Net.Dns.Resolve(strWord(1)).AddressList(0).ToString, strChannel)
+                    Case "!hm"
+                        IRC.SendMessage("Your hostmask is " & strUserMask, strChannel)
+                    Case "!die"
+                        IRC.Quit("Leaving(Channel Die(" & strUserMask & "))")
+                        Application.Exit()
+                End Select
+        End Select
+    End Sub
 End Class

@@ -92,6 +92,10 @@
                 />
             </Include>
         </Files>
+        <UserProperties
+            XMLCommentsOutputFile = ""
+            XMLCommentsActionBuild = "-1"
+        />
     </VisualBasic>
 </VisualStudioProject>
 
