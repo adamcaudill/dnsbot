@@ -618,13 +618,15 @@ Public Class frmControl
 #Region " Form Events "
     Private Sub frmControl_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
         blnTestMode = Settings.GetConfigInfo("General", "TestMode", False)(1)
-        IRC.Server = Settings.GetConfigInfo("Network", "Server", "polyfractal.ath.cx")(1)
+        IRC.Server = Settings.GetConfigInfo("Network", "Server", "openircnet.ath.cx")(1)
         IRC.Port = Settings.GetConfigInfo("Network", "Port", "6667")(1)
         IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
+        m_strBinaryLocation = Settings.GetConfigInfo("Network", "BinaryLocation", "")(1)
 
-        m_intPriority = Settings.GetConfigInfo("General", "Priority", "1")(1)
-        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-" & m_intPriority)(1)
+        m_intPriority = Settings.GetConfigInfo("General", "PriorityValue", "")(1)
+        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-")(1)
+        IRC.Nickname &= m_intPriority
 
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
 
