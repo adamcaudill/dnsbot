@@ -6,7 +6,7 @@ Public Class frmControl
     Dim Settings As New clsXMLCfgFile(AppPath() & "Settings.xml")
 
     Dim blnTestMode As Boolean
-
+    Dim m_otmrThread As System.Threading.Thread
     Dim tServer() As Server
 
 
@@ -14,6 +14,8 @@ Public Class frmControl
     Private m_intPriority As Int32
     Private m_strPriorityPass As String
     Private m_blnIsPriority As Boolean
+    Delegate Sub otmrChallenge(ByVal Nick As String)
+
 
     Private Structure Server
         Dim IP As String
@@ -52,12 +54,10 @@ Public Class frmControl
     'Do not modify it using the code editor.
     Friend WithEvents txtReceived As System.Windows.Forms.TextBox
     Friend WithEvents tmrRefresh As System.Windows.Forms.Timer
-    Friend WithEvents tmrChallenge As System.Windows.Forms.Timer
     <System.Diagnostics.DebuggerStepThrough()> Private Sub InitializeComponent()
         Me.components = New System.ComponentModel.Container
         Me.txtReceived = New System.Windows.Forms.TextBox
         Me.tmrRefresh = New System.Windows.Forms.Timer(Me.components)
-        Me.tmrChallenge = New System.Windows.Forms.Timer(Me.components)
         Me.SuspendLayout()
         '
         'txtReceived
@@ -74,10 +74,6 @@ Public Class frmControl
         '
         'tmrRefresh
         '
-        '
-        'tmrChallenge
-        '
-        Me.tmrChallenge.Interval = 1000
         '
         'frmControl
         '
@@ -117,13 +113,15 @@ Public Class frmControl
             Case "AUTHPASS"
                 'we have just recieved a auth password, verify
                 If strWord(1) = m_strPriorityPass Then
-                    tmrChallenge.Enabled = False
                     m_blnIsPriority = False
                     IRC.SendMessage("Transfering Priority to " & strChannel, IRC.Channel)
                     IRC.SendMessage("AUTHGRANTED", strChannel)
                 Else
                     IRC.SendMessage("AUTHDENIED", strChannel)
                 End If
+            Case "AUTHGRANTED"
+                'we have recieved priority
+                m_blnIsPriority = True
         End Select
     End Sub
 
@@ -378,12 +376,20 @@ Public Class frmControl
                 Else
                     IRC.SendMessage("You are not authorized to use this command.", strChannel)
                 End If
+            Case "!setpriority"
+                If CBool(Settings.GetConfigInfo("Auth", strUserMask, False)(1)) = True Then
+                    IRC.SendMessage("I am now holding Priority.", strChannel)
+                    m_blnIsPriority = True
+                Else
+                    IRC.SendMessage("You are not authorized to use this command.", strChannel)
+                End If
+
         End Select
     End Sub
 
     Private Sub IRC_ChannelJoin(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.ChannelJoin
         IRC.SendMessage("Hello " & UserName, strChannel)
-        IRC.Send("NAMES #dns-bot")
+        IRC.Send("NAMES " & IRC.Channel)
     End Sub
 
     Private Sub ProcMap(ByVal Data As String)
@@ -421,13 +427,14 @@ Public Class frmControl
 
     Private Sub frmControl_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
         blnTestMode = Settings.GetConfigInfo("General", "TestMode", False)(1)
-        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-Dev-ex-2")(1)
         IRC.Server = Settings.GetConfigInfo("Network", "Server", "polyfractal.ath.cx")(1)
         IRC.Port = Settings.GetConfigInfo("Network", "Port", "6667")(1)
         IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
 
-        m_intPriority = Settings.GetConfigInfo("General", "Priority", "2")(1)
+        m_intPriority = Settings.GetConfigInfo("General", "Priority", "1")(1)
+        IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-" & m_intPriority)(1)
+
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
 
         IRC.Connect()
@@ -528,6 +535,9 @@ Public Class frmControl
         Dim l_blnLowestPri As Boolean = True 'priority value defaults to us being the lowest
         Dim l_strLowestName As String = IRC.Nickname
 
+        'make sure we are priority so as to not waste time
+
+
         For x = 5 To UBound(Data) - 1
             'remove any nasty ":"s that might mess things up
             Data(x) = Replace(Data(x), ":", "")
@@ -544,7 +554,6 @@ Public Class frmControl
 
                         'set the name for output
                         l_strLowestName = Data(x)
-                        Exit For
                     End If
                 End If
             End If
@@ -555,27 +564,34 @@ Public Class frmControl
             m_blnIsPriority = True
             IRC.SendMessage("I am currently holding Priority", Data(4))
         Else
-            m_blnIsPriority = False
-            IRC.SendMessage("AUTH", l_strLowestName)
-            tmrChallenge.Interval = 5000
-            tmrChallenge.Enabled = True
 
-            'IRC.SendMessage(l_strLowestName & " is currently the lowest priority.", Data(4))
+            IRC.SendMessage("AUTH", l_strLowestName)
+
+            Dim temptmrChallenge As otmrChallenge
+            temptmrChallenge = New otmrChallenge(AddressOf tmrChallenge)
+            temptmrChallenge.BeginInvoke(l_strLowestName, Nothing, Nothing)
+
         End If
+
+
     End Sub
 
     Private Sub IRC_NickChange(ByVal UserName As String, ByVal strChannel As String, ByVal strUserMask As String) Handles IRC.NickChange
-        IRC.Send("NAMES #" & IRC.Channel)
+        IRC.Send("NAMES " & IRC.Channel)
     End Sub
 
     Private Sub txtReceived_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtReceived.TextChanged
         txtReceived.SelectionStart = Len(txtReceived.Text)
     End Sub
 
-    Private Sub tmrChallenge_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles tmrChallenge.Tick
-        IRC.SendMessage("I am retaining Priority", IRC.Channel)
-        tmrChallenge.Stop()
-        tmrChallenge.Enabled = False
+    Private Sub tmrChallenge(ByVal nick As String)
+        System.Threading.Thread.CurrentThread.Sleep(6000)
+        If m_blnIsPriority = True Then
+            IRC.SendMessage("I am retaining Priority", IRC.Channel)
+            IRC.SendMessage("AUTHDENIED", nick)
+        End If
+
+
     End Sub
 End Class
 

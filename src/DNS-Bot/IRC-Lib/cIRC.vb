@@ -105,7 +105,7 @@ Public Class cIRC
 
                     'Check to see if the first word is the server name
                     'If strWord(0).Substring(2).ToLower = m_strServer Then                ' <----- NOTE: Make sure this line is uncommented. (Adam)
-                    If strWord(0).ToLower = ":irc.shadowofthebat.com" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
+                    If strWord(0).ToLower = ":polyfractal.ath.cx" Then    ' <----- NOTE: The is to fix a local DNS issue. Do not use with this line. (Adam)
                         'This is a server message
                         If strWord(1) = "NOTICE" Then
                             'Server NOTICE
