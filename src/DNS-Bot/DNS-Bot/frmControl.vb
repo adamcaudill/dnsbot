@@ -430,7 +430,7 @@ Public Class frmControl
         IRC.RealName = Settings.GetConfigInfo("General", "Name", "DNS Bot")(1)
         IRC.Version = "DNS-Bot v" & Application.ProductVersion
 
-        m_intPriority = Settings.GetConfigInfo("General", "Priority", "1")(1)
+        m_intPriority = Settings.GetConfigInfo("General", "Priority", "2")(1)
         IRC.Nickname = Settings.GetConfigInfo("General", "NickName", "DNS-" & m_intPriority)(1)
 
         m_strPriorityPass = Settings.GetConfigInfo("general", "PriorityPass", "pass")(1)
@@ -545,6 +545,8 @@ Public Class frmControl
                 'check to see if there is a priority lower than me
                 'See if we're dealing with a number here
                 If IsNumeric(Mid$(Data(x), IRC.Nickname.Length, 1)) Then
+                    Debug.WriteLine(Int(Mid$(Data(x), IRC.Nickname.Length, 1)))
+
                     If Int(Mid$(Data(x), IRC.Nickname.Length, 1)) < m_intPriority Then 'mid is always one more than above mid value
 
                         'there is someone lower than us, so we dont have to worry about it
